@@ -12,11 +12,12 @@ const CFG = {
   sparkle: {
     max: 15,
     throttleMs: 28,
-    colors: ['#C4B5FD', '#E9D5FF', '#A78BFA', '#ffffff', '#FCD34D', '#F9A8D4'],
+    // No white — invisible on white background
+    colors: ['#C4B5FD', '#A78BFA', '#7C3AED', '#E9D5FF', '#FCD34D', '#F9A8D4'],
   },
-  type: {
-    charMs:  { default: 13, year: 30, em: 18 },
-    lineMs:  { default: 240, year: 480, em: 300, empty: 170 },
+  story: {
+    textLineMs:  380,  // stagger gap between text lines
+    emptyLineMs: 100,  // stagger gap between empty lines
   },
   confetti: {
     count: 135,
@@ -38,6 +39,7 @@ const CFG = {
       "I don't believe you 😌",
     ],
     maxAttempts: 5,
+    maxOffset: 200,   // max px displacement from origin
   },
 };
 
@@ -113,16 +115,13 @@ const STORY = [
 const S = {
   currentScreen: 1,
   musicPlaying: false,
-  lofiVolume: 0,
   storyStarted: false,
   questStarted: false,
   confettiDone: false,
-  // NO button
   noAttempts: 0,
   noSnapped: false,
   noInitLeft: 0,
   noInitTop: 0,
-  // Sparkles
   activeSparkles: [],
   lastSparkleTime: 0,
 };
@@ -183,8 +182,7 @@ function spawnHeart() {
   const container = document.getElementById('ambient');
   const el = document.createElement('div');
   el.className = 'a-heart';
-  const emojis = CFG.heart.emojis;
-  el.textContent = emojis[randInt(0, emojis.length - 1)];
+  el.textContent = CFG.heart.emojis[randInt(0, CFG.heart.emojis.length - 1)];
 
   const dur    = rand(7, 11);
   const rise   = rand(50, 85);
@@ -193,7 +191,7 @@ function spawnHeart() {
 
   el.style.cssText = `
     left:${rand(3,94)}%;bottom:-8%;
-    font-size:${rand(0.9,1.7)}rem;
+    font-size:${rand(0.9,1.5)}rem;
     --hdur:${dur}s;
     --hrise:-${rise}vh;
     --hr:${rot}deg;
@@ -224,24 +222,20 @@ function initSparkles() {
     if (now - S.lastSparkleTime < CFG.sparkle.throttleMs) return;
     S.lastSparkleTime = now;
 
-    // Cull oldest
     while (S.activeSparkles.length >= CFG.sparkle.max) {
-      const old = S.activeSparkles.shift();
-      old.remove();
+      S.activeSparkles.shift().remove();
     }
 
-    const el = document.createElement('div');
+    const el    = document.createElement('div');
     el.className = 'sparkle';
     const color = CFG.sparkle.colors[randInt(0, CFG.sparkle.colors.length - 1)];
     const size  = rand(3, 9);
-    const dx    = rand(-35, 35);
-    const dy    = rand(-38, -8);
 
     el.style.cssText = `
       left:${e.clientX}px;top:${e.clientY}px;
       width:${size}px;height:${size}px;
       background:${color};
-      --sdx:${dx}px;--sdy:${dy}px;
+      --sdx:${rand(-35,35)}px;--sdy:${rand(-38,-8)}px;
     `;
     container.appendChild(el);
     S.activeSparkles.push(el);
@@ -260,7 +254,7 @@ function initSparkles() {
 function initQParticles() {
   const container = document.getElementById('q-particles');
   if (!container) return;
-  const colors = ['#C4B5FD','#E9D5FF','#A78BFA','#DDD6FE','#ffffff'];
+  const colors = ['#C4B5FD','#E9D5FF','#A78BFA','#DDD6FE','#7C3AED'];
   for (let i = 0; i < 32; i++) {
     const el = document.createElement('div');
     el.className = 'q-particle';
@@ -277,9 +271,9 @@ function initQParticles() {
 }
 
 /* ╔══════════════════════════════════════════════
-   TYPEWRITER (Screen 2)
+   STORY — staggered fade-in (replaces typewriter)
 ══════════════════════════════════════════════╝ */
-async function runTypewriter() {
+async function runStory() {
   if (S.storyStarted) return;
   S.storyStarted = true;
 
@@ -287,70 +281,73 @@ async function runTypewriter() {
   const btnNext = document.getElementById('btn-things');
   if (!out) return;
 
-  // Append cursor element
-  const cursor = document.createElement('span');
-  cursor.className = 'tw-cursor';
-  out.parentNode.appendChild(cursor);
-
   const fast = reducedMotion();
 
   for (const line of STORY) {
     const span = document.createElement('span');
     const k    = line.k || 'default';
-    span.className = 'tw-line' + (line.t === '' ? ' empty' : '') + (k !== 'default' ? ` ${k}` : '');
+    span.className = 'tw-line'
+      + (line.t === '' ? ' empty' : '')
+      + (k !== 'default' ? ` ${k}` : '');
+    span.textContent = line.t;
     out.appendChild(span);
 
-    if (line.t === '') {
+    if (fast) {
       span.classList.add('on');
-      await delay(fast ? 0 : CFG.type.lineMs.empty);
       continue;
     }
 
-    span.classList.add('on');
-
-    if (fast) {
-      span.textContent = line.t;
-    } else {
-      const charMs = CFG.type.charMs[k] || CFG.type.charMs.default;
-      for (const ch of line.t) {
-        span.textContent += ch;
-        // Scroll card to show new text
-        const card = out.closest('.story-card');
-        if (card) card.scrollTop = card.scrollHeight;
-        await delay(charMs);
-      }
+    if (line.t === '') {
+      // empty lines appear instantly as spacers
+      await delay(CFG.story.emptyLineMs);
+      continue;
     }
 
-    await delay(fast ? 0 : (CFG.type.lineMs[k] || CFG.type.lineMs.default));
+    // Staggered reveal: wait, then fade in
+    await delay(CFG.story.textLineMs);
+    span.classList.add('on');
+
+    // Keep newest lines visible in the scrollable card
+    const card = out.closest('.story-card');
+    if (card) card.scrollTop = card.scrollHeight;
   }
 
-  cursor.classList.add('done');
-
-  // Show "Keep going" button
-  await delay(fast ? 0 : 600);
-  btnNext.hidden = false;
+  // Button appears after the last line finishes its transition
+  await delay(fast ? 0 : 500 + 700);
+  if (btnNext) btnNext.hidden = false;
 }
 
 /* ╔══════════════════════════════════════════════
    THING CARDS (Screen 3)
+   Button revealed only after all cards are in
 ══════════════════════════════════════════════╝ */
 function animateThingCards() {
-  const cards = document.querySelectorAll('.thing-card');
+  const cards  = document.querySelectorAll('.thing-card');
+  const btnQ   = document.getElementById('btn-question');
+  let maxDelay = 0;
+
   cards.forEach(card => {
     const delayMs = parseInt(card.dataset.delay, 10) || 0;
-    const tilt    = parseFloat(card.dataset.tilt)  || 0;
-    const bob     = parseFloat(card.dataset.bob)   || 6;
-    const bobdur  = parseFloat(card.dataset.bobdur)|| 3;
+    const tilt    = parseFloat(card.dataset.tilt)    || 0;
+    const bob     = parseFloat(card.dataset.bob)     || 6;
+    const bobdur  = parseFloat(card.dataset.bobdur)  || 3;
 
-    card.style.setProperty('--tc-tilt', `${tilt}deg`);
-    card.style.setProperty('--tc-bob',  `${bob}px`);
+    card.style.setProperty('--tc-tilt',   `${tilt}deg`);
+    card.style.setProperty('--tc-bob',    `${bob}px`);
     card.style.setProperty('--tc-bobdur', `${bobdur}s`);
+
+    if (delayMs > maxDelay) maxDelay = delayMs;
 
     setTimeout(() => {
       card.classList.add('in');
       setTimeout(() => card.classList.add('bob'), 550);
     }, delayMs);
   });
+
+  // Show button after the last card finishes entering (transition = 550ms + 300ms buffer)
+  setTimeout(() => {
+    if (btnQ) btnQ.hidden = false;
+  }, maxDelay + 550 + 300);
 }
 
 /* ╔══════════════════════════════════════════════
@@ -360,12 +357,11 @@ async function runQuestionSequence() {
   if (S.questStarted) return;
   S.questStarted = true;
 
-  const fast      = reducedMotion();
-  const ms        = fast ? 0 : 1;
-  const habibi    = document.getElementById('q-habibi');
-  const prelude   = document.getElementById('q-prelude');
-  const reveal    = document.getElementById('q-reveal');
-  const qLines    = prelude ? prelude.querySelectorAll('p') : [];
+  const fast    = reducedMotion();
+  const habibi  = document.getElementById('q-habibi');
+  const prelude = document.getElementById('q-prelude');
+  const reveal  = document.getElementById('q-reveal');
+  const qLines  = prelude ? prelude.querySelectorAll('p') : [];
 
   await delay(fast ? 0 : CFG.question.habibiDelay);
   habibi && habibi.classList.add('on');
@@ -381,14 +377,13 @@ async function runQuestionSequence() {
 
   if (reveal) {
     reveal.hidden = false;
-    // force reflow before transition
-    reveal.offsetHeight; // eslint-disable-line no-unused-expressions
+    reveal.offsetHeight; // force reflow before transition
     reveal.classList.add('on');
   }
 }
 
 /* ╔══════════════════════════════════════════════
-   NO BUTTON BEHAVIOR
+   NO BUTTON — constrained to ±200px of origin
 ══════════════════════════════════════════════╝ */
 function initNoButton() {
   const btn = document.getElementById('btn-no');
@@ -400,9 +395,9 @@ function initNoButton() {
     if (e.type === 'click' && !isMobile) e.preventDefault();
 
     if (!S.noSnapped) {
-      const rect     = btn.getBoundingClientRect();
-      S.noInitLeft   = rect.left;
-      S.noInitTop    = rect.top;
+      const rect    = btn.getBoundingClientRect();
+      S.noInitLeft  = rect.left;
+      S.noInitTop   = rect.top;
       btn.style.cssText = `
         position:fixed;
         left:${S.noInitLeft}px;
@@ -418,34 +413,41 @@ function initNoButton() {
     S.noAttempts++;
 
     if (S.noAttempts >= CFG.no.maxAttempts) {
-      btn.textContent = 'Okay fine, I tried.';
-      btn.style.fontSize   = '0.6rem';
-      btn.style.padding    = '0.3rem 0.8rem';
-      btn.style.opacity    = '0.55';
-      // Move to a quiet corner
-      const dx = (window.innerWidth - S.noInitLeft - 120) * (Math.random() > 0.5 ? 0.9 : -0.9);
-      const dy = (window.innerHeight - S.noInitTop - 40) * 0.85;
-      btn.style.transform  = `translate(${dx}px,${dy}px) rotate(${rand(-8,8)}deg) scale(0.6)`;
+      btn.textContent    = 'Okay fine, I tried.';
+      btn.style.fontSize = '0.6rem';
+      btn.style.padding  = '0.3rem 0.8rem';
+      btn.style.opacity  = '0.45';
+      // Drift to a small corner position, still within the 200px box
+      const dx = rand(-60, 60);
+      const dy = rand(60, 120);
+      btn.style.transform = `translate(${dx}px,${dy}px) rotate(${rand(-8,8)}deg) scale(0.55)`;
       btn.removeEventListener('mouseenter', handleNoInteraction);
       btn.removeEventListener('click', handleNoInteraction);
       return;
     }
 
-    // Rotate through texts (skip index 0 "Hmm... no?" after first)
+    // Cycle through alternative texts
     const pool = CFG.no.texts.slice(1);
     btn.textContent = pool[randInt(0, pool.length - 1)];
 
-    // Compute random viewport target
     const bw = btn.offsetWidth  || 140;
     const bh = btn.offsetHeight || 44;
-    const margin = 80;
-    const tL = rand(margin, window.innerWidth  - bw - margin);
-    const tT = rand(margin, window.innerHeight - bh - margin);
+    const maxOff = CFG.no.maxOffset;
 
-    const dx  = tL - S.noInitLeft;
-    const dy  = tT - S.noInitTop;
+    // Random offset clamped to ±maxOffset AND within viewport
+    const rawDx = rand(-maxOff, maxOff);
+    const rawDy = rand(-maxOff, maxOff);
+
+    const newLeft = S.noInitLeft + rawDx;
+    const newTop  = S.noInitTop  + rawDy;
+
+    const clampedLeft = Math.max(20, Math.min(window.innerWidth  - bw - 20, newLeft));
+    const clampedTop  = Math.max(20, Math.min(window.innerHeight - bh - 20, newTop));
+
+    const dx  = clampedLeft - S.noInitLeft;
+    const dy  = clampedTop  - S.noInitTop;
     const rot = rand(-20, 20);
-    const sc  = rand(0.75, 0.88);
+    const sc  = rand(0.78, 0.9);
 
     btn.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(${sc})`;
   }
@@ -467,13 +469,13 @@ function launchConfetti() {
   if (!container) return;
 
   for (let i = 0; i < CFG.confetti.count; i++) {
-    const el    = document.createElement('div');
-    el.className = 'cf';
-    const color = CFG.confetti.colors[randInt(0, CFG.confetti.colors.length - 1)];
+    const el     = document.createElement('div');
+    el.className  = 'cf';
+    const color   = CFG.confetti.colors[randInt(0, CFG.confetti.colors.length - 1)];
     const isHeart = Math.random() < 0.14;
 
     if (isHeart) {
-      el.textContent = '💜';
+      el.textContent    = '💜';
       el.style.fontSize = `${rand(10, 18)}px`;
     } else {
       const size = rand(6, 13);
@@ -484,27 +486,22 @@ function launchConfetti() {
       el.style.background   = color;
     }
 
-    const x   = rand(0, window.innerWidth);
-    const dur = rand(2.4, 4.2);
-    const del = rand(0, 1.1);
-
-    el.style.setProperty('--cx',   `${x}px`);
+    el.style.setProperty('--cx',   `${rand(0, window.innerWidth)}px`);
     el.style.setProperty('--cdr',  `${rand(-90, 90)}px`);
     el.style.setProperty('--cs',   rand(0.5, 1.1).toFixed(2));
     el.style.setProperty('--crot', `${rand(180, 540)}deg`);
     el.style.left      = '0';
     el.style.top       = '0';
-    el.style.animation = `cfFall ${dur}s cubic-bezier(.22,1,.36,1) ${del}s forwards`;
+    el.style.animation = `cfFall ${rand(2.4, 4.2)}s cubic-bezier(.22,1,.36,1) ${rand(0, 1.1)}s forwards`;
 
     container.appendChild(el);
   }
 
-  // Extra burst of celebration hearts from ambient
+  // Extra celebratory hearts
   for (let i = 0; i < 22; i++) {
     setTimeout(() => spawnHeart(), rand(0, 1200));
   }
 
-  // Clean up confetti after animation ends
   setTimeout(() => {
     while (container.firstChild) container.removeChild(container.firstChild);
     S.confettiDone = false;
@@ -512,15 +509,16 @@ function launchConfetti() {
 }
 
 /* ╔══════════════════════════════════════════════
-   AUDIO MANAGER
+   AUDIO — lofi only; loml replaced by Spotify embed
 ══════════════════════════════════════════════╝ */
 const Audio = (() => {
   const lofi = document.getElementById('audio-lofi');
-  const loml = document.getElementById('audio-loml');
   let playing = false;
+  let musicBtn = null;
 
   function fadeVolume(el, from, to, durationMs) {
     return new Promise(resolve => {
+      if (!el) { resolve(); return; }
       el.volume = Math.max(0, Math.min(1, from));
       const start = performance.now();
       function tick(now) {
@@ -534,17 +532,23 @@ const Audio = (() => {
   }
 
   function toggle(btn) {
+    musicBtn = btn;
     if (!playing) {
+      if (!lofi) return;
       lofi.volume = 0;
-      lofi.play().then(() => {
-        fadeVolume(lofi, 0, 0.55, 1200);
-        playing = true;
-        btn.setAttribute('aria-pressed', 'true');
-        btn.classList.add('is-playing');
-      }).catch(() => {});
+      lofi.play()
+        .then(() => {
+          fadeVolume(lofi, 0, 0.55, 1200);
+          playing = true;
+          btn.setAttribute('aria-pressed', 'true');
+          btn.classList.add('is-playing');
+        })
+        .catch(() => {
+          // Autoplay blocked — will try again on next user interaction
+        });
     } else {
-      fadeVolume(lofi, lofi.volume, 0, 800).then(() => {
-        lofi.pause();
+      fadeVolume(lofi, lofi ? lofi.volume : 0, 0, 800).then(() => {
+        if (lofi) lofi.pause();
         playing = false;
         btn.setAttribute('aria-pressed', 'false');
         btn.classList.remove('is-playing');
@@ -552,37 +556,50 @@ const Audio = (() => {
     }
   }
 
-  async function transitionToLOML() {
-    const wasPlaying = playing;
-
-    if (wasPlaying) {
-      await fadeVolume(lofi, lofi.volume, 0, 2000);
+  function fadeOutLofi() {
+    if (!playing || !lofi) return Promise.resolve();
+    return fadeVolume(lofi, lofi.volume, 0, 2000).then(() => {
       lofi.pause();
-    }
-
-    loml.volume = 0;
-    loml.play().then(() => {
-      fadeVolume(loml, 0, 0.65, 2000);
-      playing = true;
-    }).catch(() => {});
+      playing = false;
+      if (musicBtn) {
+        musicBtn.setAttribute('aria-pressed', 'false');
+        musicBtn.classList.remove('is-playing');
+      }
+    });
   }
 
-  return { toggle, transitionToLOML, isPlaying: () => playing };
+  function isPlaying() { return playing; }
+
+  return { toggle, fadeOutLofi, isPlaying };
 })();
 
+/* ╔══════════════════════════════════════════════
+   SPOTIFY PLAYER
+══════════════════════════════════════════════╝ */
+function showSpotifyPlayer() {
+  const pill = document.getElementById('spotify-pill');
+  if (!pill) return;
+  pill.hidden = false;
+  pill.offsetHeight; // force reflow
+  pill.classList.add('show');
+}
+
+/* ╔══════════════════════════════════════════════
+   NOW-PLAYING TOAST
+══════════════════════════════════════════════╝ */
 function showNowPlaying() {
   const pill = document.getElementById('now-playing');
   if (!pill) return;
   pill.classList.add('show');
-  setTimeout(() => pill.classList.remove('show'), 5000);
+  setTimeout(() => pill.classList.remove('show'), 4500);
 }
 
 /* ╔══════════════════════════════════════════════
    MODAL (Easter egg)
 ══════════════════════════════════════════════╝ */
 function initModal() {
-  const modal   = document.getElementById('capsule-modal');
-  const openBtn = document.getElementById('capsule-btn');
+  const modal    = document.getElementById('capsule-modal');
+  const openBtn  = document.getElementById('capsule-btn');
   const closeBtn = document.getElementById('modal-close');
   const backdrop = document.getElementById('modal-backdrop');
   if (!modal) return;
@@ -602,10 +619,7 @@ function initModal() {
   openBtn  && openBtn.addEventListener('click', open);
   closeBtn && closeBtn.addEventListener('click', close);
   backdrop && backdrop.addEventListener('click', close);
-
-  modal.addEventListener('keydown', e => {
-    if (e.key === 'Escape') close();
-  });
+  modal.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 }
 
 /* ╔══════════════════════════════════════════════
@@ -615,7 +629,7 @@ function wireNavigation() {
   // Screen 1 → 2
   document.getElementById('btn-story')?.addEventListener('click', () => {
     showScreen(2);
-    setTimeout(runTypewriter, 500);
+    setTimeout(runStory, 500);
   });
 
   // Screen 2 → 3
@@ -634,11 +648,12 @@ function wireNavigation() {
   document.getElementById('btn-yes')?.addEventListener('click', () => {
     showScreen(5);
     launchConfetti();
-    Audio.transitionToLOML();
-    setTimeout(showNowPlaying, 1200);
+    Audio.fadeOutLofi();
+    setTimeout(showSpotifyPlayer, 800);
+    setTimeout(showNowPlaying, 1400);
   });
 
-  // Screen 5 → back to 1 (loop)
+  // Screen 5 → back to 1
   document.getElementById('btn-end')?.addEventListener('click', () => {
     showScreen(1);
   });
@@ -646,6 +661,7 @@ function wireNavigation() {
 
 /* ╔══════════════════════════════════════════════
    MUSIC BUTTON
+   Plays only on explicit user interaction — no autoplay
 ══════════════════════════════════════════════╝ */
 function wireMusicBtn() {
   const btn = document.getElementById('music-btn');
