@@ -835,8 +835,13 @@ button { font-family: var(--font); }
   font-size: clamp(3rem, 10vw, 5rem);
   display: block;
   margin: 0.8rem auto 1.4rem;
+  color: #EF4444;
   will-change: transform;
   animation: heartbeat 1.3s ease-in-out infinite;
+}
+
+.music-btn svg {
+  flex-shrink: 0;
 }
 
 @keyframes heartbeat {

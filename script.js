@@ -419,15 +419,41 @@ function initNoButton() {
     const bh  = btn.offsetHeight;
     const pad = 14;
 
-    // Valid range of transforms relative to natural position
-    const minDx = cardRect.left  + pad          - S.noNatLeft;
-    const maxDx = cardRect.right - bw - pad     - S.noNatLeft;
-    const minDy = cardRect.top   + pad          - S.noNatTop;
-    const maxDy = cardRect.bottom - bh - pad    - S.noNatTop;
+    const minDx = cardRect.left  + pad       - S.noNatLeft;
+    const maxDx = cardRect.right - bw - pad  - S.noNatLeft;
+    const minDy = cardRect.top   + pad       - S.noNatTop;
+    const maxDy = cardRect.bottom - bh - pad - S.noNatTop;
 
-    // Pick a random position within bounds; guard against inverted ranges
-    const dx  = (maxDx > minDx) ? rand(minDx, maxDx) : 0;
-    const dy  = (maxDy > minDy) ? rand(minDy, maxDy) : 0;
+    if (maxDx <= minDx || maxDy <= minDy) return;
+
+    // Obstacle elements to avoid overlapping (text, headings, yes button)
+    const screen4   = document.getElementById('s4');
+    const obstacles = screen4
+      ? Array.from(screen4.querySelectorAll('h2, .q-prelude p, .the-q, .q-emoji, #btn-yes'))
+      : [];
+
+    let dx = rand(minDx, maxDx);
+    let dy = rand(minDy, maxDy);
+
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const cDx = rand(minDx, maxDx);
+      const cDy = rand(minDy, maxDy);
+      const nl  = S.noNatLeft + cDx;
+      const nt  = S.noNatTop  + cDy;
+      const nr  = nl + bw;
+      const nb  = nt + bh;
+      const M   = 10; // clearance margin
+
+      const blocked = obstacles.some(el => {
+        const r = el.getBoundingClientRect();
+        return nl < r.right + M && nr > r.left - M &&
+               nt < r.bottom + M && nb > r.top - M;
+      });
+
+      dx = cDx; dy = cDy;
+      if (!blocked) break; // found a clear spot
+    }
+
     const rot = rand(-18, 18);
     const sc  = rand(0.8, 0.92);
 
@@ -641,6 +667,7 @@ function wireNavigation() {
     const loml = document.getElementById('audio-loml');
     if (loml) {
       loml.volume = 0;
+      loml.loop   = true;
       // Direct play call inside click handler — satisfies autoplay policy
       loml.play().catch(err => console.error('[habibi] loml play error:', err));
     }
@@ -653,9 +680,9 @@ function wireNavigation() {
     setTimeout(showNowPlaying, 2200);
   });
 
-  // Screen 5 → loop back to screen 1
-  document.getElementById('btn-end')?.addEventListener('click', () => {
-    showScreen(1);
+  // Screen 5 — celebratory burst, stays on celebration screen
+  document.getElementById('btn-end')?.addEventListener('click', function() {
+    burstFromButton(this);
   });
 }
 
@@ -666,6 +693,89 @@ function wireMusicBtn() {
   const btn = document.getElementById('music-btn');
   if (!btn) return;
   btn.addEventListener('click', () => AudioMgr.toggleMute());
+}
+
+/* ╔══════════════════════════════════════════════
+   CONFETTI BURST — rAF physics, no libraries
+   150+ particles shot from button center.
+   Mix: rectangles, ❤️ hearts, 🎉 poppers.
+   Gravity + fade. No navigation on click.
+══════════════════════════════════════════════╝ */
+function burstFromButton(btn) {
+  if (reducedMotion()) return;
+
+  const btnRect = btn.getBoundingClientRect();
+  const ox = btnRect.left + btnRect.width  / 2;
+  const oy = btnRect.top  + btnRect.height / 2;
+
+  const COLORS = ['#6D28D9','#C4B5FD','#FCD34D','#ffffff','#E9D5FF','#F9A8D4','#A78BFA','#DDD6FE'];
+  const COUNT  = 165;
+  const particles = [];
+
+  for (let i = 0; i < COUNT; i++) {
+    const el    = document.createElement('div');
+    el.style.cssText = 'position:fixed;z-index:9998;pointer-events:none;will-change:transform,opacity;';
+    const r     = Math.random();
+    const angle = Math.random() * Math.PI * 2;
+    const speed = rand(5, 14);
+    let hw = 6, hh = 6; // half-dims for centering
+
+    if (r < 0.18) {
+      el.textContent   = '🎉';
+      el.style.fontSize = `${rand(16, 24)}px`;
+    } else if (r < 0.36) {
+      el.textContent   = '❤️';
+      el.style.fontSize = `${rand(14, 20)}px`;
+    } else {
+      const w = rand(6, 14);
+      const h = rand(3, 7);
+      el.style.width        = `${w}px`;
+      el.style.height       = `${h}px`;
+      el.style.background   = COLORS[randInt(0, COLORS.length - 1)];
+      el.style.borderRadius = '2px';
+      hw = w / 2; hh = h / 2;
+    }
+
+    document.body.appendChild(el);
+
+    // Cache half-dims after DOM insertion
+    const cw = (el.offsetWidth  || hw * 2) / 2;
+    const ch = (el.offsetHeight || hh * 2) / 2;
+
+    particles.push({
+      el, cw, ch,
+      x:   ox,
+      y:   oy,
+      vx:  Math.cos(angle) * speed,
+      vy:  Math.sin(angle) * speed,
+      g:   rand(0.18, 0.35),
+      op:  1,
+      rot: Math.random() * 360,
+      rv:  rand(-12, 12),
+    });
+  }
+
+  function step() {
+    let alive = false;
+    for (const p of particles) {
+      if (p.op <= 0) continue;
+      alive = true;
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.vy += p.g;
+      p.vx *= 0.985;
+      p.op -= 0.009;
+      p.rot += p.rv;
+      p.el.style.left      = `${p.x - p.cw}px`;
+      p.el.style.top       = `${p.y - p.ch}px`;
+      p.el.style.opacity   = Math.max(0, p.op);
+      p.el.style.transform = `rotate(${p.rot}deg)`;
+      if (p.op <= 0) p.el.remove();
+    }
+    if (alive) requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
 }
 
 /* ╔══════════════════════════════════════════════
