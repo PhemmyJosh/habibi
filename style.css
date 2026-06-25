@@ -39,6 +39,7 @@ body {
   font-family: var(--font);
   background: var(--c-bg);
   color: var(--c-text);
+  min-height: 100vh;       /* fallback for browsers without dvh */
   min-height: 100dvh;
   overflow: hidden;
   position: relative;
@@ -196,12 +197,13 @@ button { font-family: var(--font); }
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 0;
-  z-index: 600;
+  width: 100%;
+  z-index: 9999;
   text-align: center;
   padding-bottom: 0.75rem;
   font-size: 0.7rem;
   color: #9CA3AF;
+  background: transparent;
   pointer-events: none;
   user-select: none;
 }

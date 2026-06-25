@@ -842,14 +842,18 @@ function burstFromButton(btn) {
    INIT
 ══════════════════════════════════════════════╝ */
 function init() {
-  initStars();
-  startHeartLoop();
-  initSparkles();
-  initQParticles();
-  initNoButton();
-  initModal();
-  wireNavigation();
-  wireMusicBtn();
+  try {
+    initStars();
+    startHeartLoop();
+    initSparkles();
+    initQParticles();
+    initNoButton();
+    initModal();
+    wireNavigation();
+    wireMusicBtn();
+  } catch (err) {
+    console.error('[habibi] init error:', err);
+  }
 }
 
 document.readyState === 'loading'
