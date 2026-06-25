@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A little something for you 💜">
+  <title>For Habibi 💜</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Global ambient layer: floating hearts -->
+  <div id="ambient" aria-hidden="true"></div>
+
+  <!-- Cursor sparkles -->
+  <div id="sparkles" aria-hidden="true"></div>
+
+  <!-- Music control -->
+  <button id="music-btn" class="music-btn" aria-label="Toggle background music" aria-pressed="false">
+    <span aria-hidden="true">🎵</span>
+    <span class="music-label">Soft vibes</span>
+  </button>
+
+  <!-- Now-playing toast -->
+  <div id="now-playing" class="now-playing" role="status" aria-live="polite" aria-atomic="true">
+    <span>🎵 Now playing</span>
+    <strong>LOML — Savy Henry</strong>
+  </div>
+
+  <!-- Easter egg: time capsule -->
+  <button id="capsule-btn" class="capsule-btn" aria-label="Open our time capsule">
+    Open our time capsule 💌
+  </button>
+
+  <!-- Time capsule modal -->
+  <div id="capsule-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="capsule-title" hidden>
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <article class="modal-card" id="capsule-title">
+      <button class="modal-close" id="modal-close" aria-label="Close time capsule">✕</button>
+      <div class="letter-body">
+        <p>Favour,</p>
+        <p>Five years ago, I got a friend.</p>
+        <p>Last month, I got a partner.</p>
+        <p>Today,</p>
+        <p>I'm hoping to get the privilege<br>of officially calling you my girlfriend.</p>
+        <p>No matter what title we use,<br>I'll keep choosing you.</p>
+        <p class="letter-closing">Yours, always.</p>
+        <p class="letter-heart">💜</p>
+      </div>
+    </article>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 1 — INTRODUCTION
+  ══════════════════════════════════════════ -->
+  <section id="s1" class="screen s-intro is-active" aria-label="Introduction">
+    <div class="intro-bg" aria-hidden="true">
+      <div class="intro-grad"></div>
+      <div id="stars" class="stars-layer"></div>
+    </div>
+    <div class="glass-card intro-card">
+      <p class="for-favour">For Favour 💜</p>
+      <p class="or-say">Or should I say...</p>
+      <h1 class="habibi-title">Habibi ✨</h1>
+      <div class="intro-copy">
+        <p>Five years ago,</p>
+        <p>I met someone who would become one of my favorite people.</p>
+        <p>And now...</p>
+        <p>I have one tiny question left.</p>
+      </div>
+      <button class="btn btn-primary" id="btn-story">Let's take a little trip ➜</button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 2 — OUR STORY
+  ══════════════════════════════════════════ -->
+  <section id="s2" class="screen s-story" aria-label="Our story" inert>
+    <div class="story-bg" aria-hidden="true"></div>
+    <div class="glass-card story-card">
+      <div class="ornament" aria-hidden="true">✦ &thinsp; ✦ &thinsp; ✦</div>
+      <div id="tw-out" class="tw-out" aria-live="polite" aria-label="Our story, appearing now"></div>
+      <button class="btn btn-primary story-next" id="btn-things" hidden aria-label="Continue to little things about Habibi">
+        Keep going 💜
+      </button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 3 — LITTLE THINGS
+  ══════════════════════════════════════════ -->
+  <section id="s3" class="screen s-things" aria-label="Little things about Habibi" inert>
+    <div class="things-glow" aria-hidden="true"></div>
+    <header class="things-header">
+      <h2>Little things about Habibi</h2>
+      <p class="things-sub">Just a few of the reasons...</p>
+    </header>
+    <ul class="things-grid" aria-label="Things about Habibi">
+      <li class="thing-card glass-card" data-delay="0"   data-tilt="-2"   data-bob="6"  data-bobdur="3.1">
+        <span class="t-emoji" aria-hidden="true">💜</span>
+        <span>Favorite color: Purple</span>
+      </li>
+      <li class="thing-card glass-card" data-delay="140" data-tilt="2"    data-bob="8"  data-bobdur="2.8">
+        <span class="t-emoji" aria-hidden="true">✨</span>
+        <span>The prettiest smile</span>
+      </li>
+      <li class="thing-card glass-card" data-delay="280" data-tilt="-1.5" data-bob="5"  data-bobdur="3.4">
+        <span class="t-emoji" aria-hidden="true">😂</span>
+        <span>Laughs at my jokes<br><small>(even the questionable ones)</small></span>
+      </li>
+      <li class="thing-card glass-card" data-delay="420" data-tilt="3"    data-bob="7"  data-bobdur="2.6">
+        <span class="t-emoji" aria-hidden="true">🌸</span>
+        <span>My Habibi</span>
+      </li>
+      <li class="thing-card glass-card" data-delay="560" data-tilt="-2.5" data-bob="9"  data-bobdur="3.2">
+        <span class="t-emoji" aria-hidden="true">📱</span>
+        <span>My favorite notification</span>
+      </li>
+      <li class="thing-card glass-card" data-delay="700" data-tilt="1.5"  data-bob="6"  data-bobdur="2.9">
+        <span class="t-emoji" aria-hidden="true">🤍</span>
+        <span>The person I can be completely myself with</span>
+      </li>
+      <li class="thing-card glass-card" data-delay="840" data-tilt="-1"   data-bob="8"  data-bobdur="3.3">
+        <span class="t-emoji" aria-hidden="true">🌙</span>
+        <span>The person I want to keep talking to long after midnight</span>
+      </li>
+    </ul>
+    <button class="btn btn-primary" id="btn-question" aria-label="One last thing">One last thing...</button>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 4 — THE QUESTION
+  ══════════════════════════════════════════ -->
+  <section id="s4" class="screen s-question" aria-label="The question" inert>
+    <div id="q-particles" aria-hidden="true"></div>
+    <div class="glass-card question-card">
+      <h2 class="q-habibi" id="q-habibi">Habibi...</h2>
+      <div class="q-prelude" id="q-prelude">
+        <p>We've already chosen each other.</p>
+        <p>We've already started this journey.</p>
+        <p>But after five years of friendship,</p>
+        <p>and after deciding to do life together,</p>
+        <p>I still wanted to ask in a way we'd remember.</p>
+      </div>
+      <div class="q-reveal" id="q-reveal" hidden>
+        <h2 class="the-q">Will you let me officially<br>call you my girlfriend?</h2>
+        <p class="q-emoji">🥹💜</p>
+        <div class="answer-row" id="answer-row">
+          <button class="btn btn-yes" id="btn-yes" aria-label="Yes, Habibi">Yes, Habibi 💜</button>
+          <button class="btn btn-no"  id="btn-no"  aria-label="No"          >Hmm... no?</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SCREEN 5 — CELEBRATION
+  ══════════════════════════════════════════ -->
+  <section id="s5" class="screen s-celebrate" aria-label="Celebration" inert>
+    <div id="confetti" class="confetti-layer" aria-hidden="true"></div>
+    <div class="glass-card celebrate-card">
+      <h2 class="celebrate-h2">We were always heading here 💜</h2>
+      <div class="celebrate-copy">
+        <p>Five years of friendship.</p>
+        <p>One month of loving differently.</p>
+        <p>And today,</p>
+        <p>a tiny question found its answer.</p>
+      </div>
+      <div class="perks-box">
+        <h3>Perks unlocked ✨</h3>
+        <p>💜 A lifetime subscription to my affection</p>
+      </div>
+      <div class="pulse-heart" aria-hidden="true">💜</div>
+      <button class="btn btn-primary" id="btn-end">Our story officially begins ✨</button>
+    </div>
+  </section>
+
+  <!-- Audio -->
+  <audio id="audio-lofi" loop preload="none">
+    <source src="assets/audio/lofi.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="audio-loml" preload="none">
+    <source src="assets/audio/loml.mp3" type="audio/mpeg">
+  </audio>
+
+  <script src="script.js"></script>
+</body>
+</html>
