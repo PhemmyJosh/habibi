@@ -539,31 +539,32 @@ button { font-family: var(--font); }
 .story-card::-webkit-scrollbar-track { background: transparent; }
 .story-card::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.28); border-radius: 4px; }
 
-/* Skip button — ghost, subtle, top-right of story screen */
+/* Skip button — fixed on body, above all screens (z-index > music btn 800).
+   DEBUG: opacity 1 + solid purple so it's easy to spot during testing. */
 .btn-skip-story {
-  position: absolute;
-  top: 1rem;
+  position: fixed;
+  top: 4rem;
   right: 1.2rem;
-  z-index: 20;
-  background: transparent;
-  border: 1px solid rgba(109, 40, 217, 0.18);
+  z-index: 850;
+  background: var(--c-royal);
+  border: none;
   border-radius: 100px;
-  color: rgba(109, 40, 217, 0.4);
+  color: #ffffff;
   font-family: var(--font);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  padding: 0.28rem 0.7rem;
+  padding: 0.35rem 0.85rem;
   cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  opacity: 1;
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.4);
+  transition: transform 0.2s var(--ease), box-shadow 0.2s ease;
   user-select: none;
 }
 
 .btn-skip-story:hover {
-  opacity: 1;
-  color: var(--c-royal);
-  border-color: rgba(109, 40, 217, 0.45);
+  transform: scale(1.05);
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.55);
 }
 
 .btn-skip-story:focus-visible {

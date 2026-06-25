@@ -161,6 +161,12 @@ function showScreen(n) {
   next.classList.add('is-active');
   next.removeAttribute('inert');
   S.currentScreen = n;
+
+  // Hide skip button whenever we leave the story screen
+  if (n !== 2) {
+    const skipBtn = document.getElementById('btn-skip-story');
+    if (skipBtn) skipBtn.hidden = true;
+  }
 }
 
 /* ╔══════════════════════════════════════════════
@@ -285,6 +291,9 @@ async function runStory() {
   const btnNext = document.getElementById('btn-things');
   const skipBtn = document.getElementById('btn-skip-story');
   if (!out) return;
+
+  // Reveal the skip button now that the story is actively running
+  if (skipBtn) skipBtn.hidden = false;
 
   const fast = reducedMotion();
 
