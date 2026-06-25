@@ -696,80 +696,100 @@ function wireMusicBtn() {
 }
 
 /* ╔══════════════════════════════════════════════
-   CONFETTI BURST — rAF physics, no libraries
-   150+ particles shot from button center.
-   Mix: rectangles, ❤️ hearts, 🎉 poppers.
-   Gravity + fade. No navigation on click.
+   CONFETTI BURST — 600 particles, 5 simultaneous
+   origins. rAF physics, GPU-composited transforms
+   only (no left/top per frame, no offsetWidth reads).
 ══════════════════════════════════════════════╝ */
 function burstFromButton(btn) {
   if (reducedMotion()) return;
 
-  const btnRect = btn.getBoundingClientRect();
-  const ox = btnRect.left + btnRect.width  / 2;
-  const oy = btnRect.top  + btnRect.height / 2;
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const br = btn.getBoundingClientRect();
+  const bx = br.left + br.width  / 2;
+  const by = br.top  + br.height / 2;
 
-  const COLORS = ['#6D28D9','#C4B5FD','#FCD34D','#ffffff','#E9D5FF','#F9A8D4','#A78BFA','#DDD6FE'];
-  const COUNT  = 165;
+  const COLORS = [
+    '#6D28D9','#7C3AED','#C4B5FD','#E9D5FF','#A78BFA','#DDD6FE',
+    '#FCD34D','#FBBF24','#F472B6','#FB923C','#34D399','#60A5FA',
+    '#ffffff','#F9A8D4','#E879F9','#4ADE80','#38BDF8',
+  ];
+
+  // 5 origins × 120 = 600 particles, all launched simultaneously.
+  // y = -20 for top origins places the popper just above the viewport.
+  // minA / maxA in radians (0 = right, π/2 = down in screen coords).
+  const ORIGINS = [
+    { x: W * 0.08, y: -20,    minA: 0,               maxA: Math.PI * 0.80, n: 120 }, // top-left  → right+down
+    { x: W * 0.92, y: -20,    minA: Math.PI * 0.20,  maxA: Math.PI,        n: 120 }, // top-right → left+down
+    { x: W * 0.50, y: -20,    minA: Math.PI * 0.10,  maxA: Math.PI * 0.90, n: 120 }, // top-center → wide down fan
+    { x: W * 0.50, y: H * 0.50, minA: 0,             maxA: Math.PI * 2,    n: 120 }, // screen center → all dirs
+    { x: bx,       y: by,     minA: 0,               maxA: Math.PI * 2,    n: 120 }, // button center → all dirs
+  ];
+
   const particles = [];
 
-  for (let i = 0; i < COUNT; i++) {
-    const el    = document.createElement('div');
-    el.style.cssText = 'position:fixed;z-index:9998;pointer-events:none;will-change:transform,opacity;';
-    const r     = Math.random();
-    const angle = Math.random() * Math.PI * 2;
-    const speed = rand(5, 14);
-    let hw = 6, hh = 6; // half-dims for centering
+  for (const o of ORIGINS) {
+    for (let i = 0; i < o.n; i++) {
+      const el = document.createElement('div');
+      el.style.cssText =
+        'position:fixed;left:0;top:0;z-index:9998;pointer-events:none;will-change:transform,opacity;';
 
-    if (r < 0.18) {
-      el.textContent   = '🎉';
-      el.style.fontSize = `${rand(16, 24)}px`;
-    } else if (r < 0.36) {
-      el.textContent   = '❤️';
-      el.style.fontSize = `${rand(14, 20)}px`;
-    } else {
-      const w = rand(6, 14);
-      const h = rand(3, 7);
-      el.style.width        = `${w}px`;
-      el.style.height       = `${h}px`;
-      el.style.background   = COLORS[randInt(0, COLORS.length - 1)];
-      el.style.borderRadius = '2px';
-      hw = w / 2; hh = h / 2;
+      const r     = Math.random();
+      const angle = rand(o.minA, o.maxA);
+      const speed = rand(3, 22);       // wildly varied speed
+      let   cw = 7, ch = 7;            // half-dims for centering (no offsetWidth)
+
+      if (r < 0.15) {
+        const fs = rand(14, 30);
+        el.textContent    = '🎉';
+        el.style.fontSize = `${fs}px`;
+        cw = fs * 0.55; ch = fs * 0.55;
+      } else if (r < 0.30) {
+        const fs = rand(12, 26);
+        el.textContent    = '❤️';
+        el.style.fontSize = `${fs}px`;
+        cw = fs * 0.55; ch = fs * 0.55;
+      } else {
+        const w = rand(4, 20);         // wildly varied widths
+        const h = rand(2, 12);         // wildly varied heights
+        el.style.width        = `${w}px`;
+        el.style.height       = `${h}px`;
+        el.style.background   = COLORS[randInt(0, COLORS.length - 1)];
+        el.style.borderRadius = Math.random() < 0.35 ? '50%' : '2px';
+        cw = w / 2; ch = h / 2;
+      }
+
+      document.body.appendChild(el);
+
+      particles.push({
+        el, cw, ch,
+        x:   o.x,
+        y:   o.y,
+        vx:  Math.cos(angle) * speed,
+        vy:  Math.sin(angle) * speed,
+        g:   rand(0.14, 0.42),         // wildly varied gravity
+        op:  1,
+        rot: Math.random() * 360,
+        rv:  rand(-25, 25),            // wild spin
+      });
     }
-
-    document.body.appendChild(el);
-
-    // Cache half-dims after DOM insertion
-    const cw = (el.offsetWidth  || hw * 2) / 2;
-    const ch = (el.offsetHeight || hh * 2) / 2;
-
-    particles.push({
-      el, cw, ch,
-      x:   ox,
-      y:   oy,
-      vx:  Math.cos(angle) * speed,
-      vy:  Math.sin(angle) * speed,
-      g:   rand(0.18, 0.35),
-      op:  1,
-      rot: Math.random() * 360,
-      rv:  rand(-12, 12),
-    });
   }
 
   function step() {
     let alive = false;
     for (const p of particles) {
       if (p.op <= 0) continue;
-      alive = true;
-      p.x  += p.vx;
-      p.y  += p.vy;
-      p.vy += p.g;
-      p.vx *= 0.985;
-      p.op -= 0.009;
-      p.rot += p.rv;
-      p.el.style.left      = `${p.x - p.cw}px`;
-      p.el.style.top       = `${p.y - p.ch}px`;
+      alive   = true;
+      p.x    += p.vx;
+      p.y    += p.vy;
+      p.vy   += p.g;
+      p.vx   *= 0.987;
+      p.op   -= 0.006;                 // ~2.8 s lifetime at 60 fps
+      p.rot  += p.rv;
+      // GPU-composited: only transform + opacity change per frame
       p.el.style.opacity   = Math.max(0, p.op);
-      p.el.style.transform = `rotate(${p.rot}deg)`;
+      p.el.style.transform =
+        `translate(${p.x - p.cw}px,${p.y - p.ch}px) rotate(${p.rot}deg)`;
       if (p.op <= 0) p.el.remove();
     }
     if (alive) requestAnimationFrame(step);
