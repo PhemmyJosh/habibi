@@ -26,8 +26,7 @@
 
   <!-- Now-playing toast -->
   <div id="now-playing" class="now-playing" role="status" aria-live="polite" aria-atomic="true">
-    <span>🎵 Now playing</span>
-    <strong>LOML — Savy Henry</strong>
+    🎵 Now playing — LOML · Savy Henry
   </div>
 
   <!-- Easter egg: time capsule -->
@@ -83,7 +82,7 @@
     <div class="glass-card story-card">
       <div class="ornament" aria-hidden="true">✦ &thinsp; ✦ &thinsp; ✦</div>
       <div id="tw-out" class="tw-out" aria-live="polite" aria-label="Our story, appearing now"></div>
-      <button class="btn btn-primary story-next" id="btn-things" hidden aria-label="Continue to little things about Habibi">
+      <button class="btn btn-primary story-next btn-deferred" id="btn-things" aria-label="Continue to little things about Habibi">
         Keep going 💜
       </button>
     </div>
@@ -128,7 +127,7 @@
         <span>The person I want to keep talking to long after midnight</span>
       </li>
     </ul>
-    <button class="btn btn-primary" id="btn-question" hidden aria-label="One last thing">One last thing...</button>
+    <button class="btn btn-primary btn-deferred" id="btn-question" aria-label="One last thing">One last thing...</button>
   </section>
 
   <!-- ══════════════════════════════════════════
@@ -182,18 +181,9 @@
   <audio id="audio-lofi" loop preload="none">
     <source src="assets/audio/lofi.mp3" type="audio/mpeg">
   </audio>
-  <!-- Spotify player — revealed when YES is clicked -->
-  <div id="spotify-pill" class="spotify-pill" hidden>
-    <iframe
-      src="https://open.spotify.com/embed/track/7wqlJtD2lzRjA3bwFcBWFS?utm_source=generator&theme=0"
-      width="100%"
-      height="80"
-      frameborder="0"
-      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-      loading="lazy"
-      title="LOML — Savy Henry on Spotify"
-    ></iframe>
-  </div>
+  <audio id="audio-loml" preload="none">
+    <source src="assets/audio/loml.mp3" type="audio/mpeg">
+  </audio>
 
   <script src="script.js"></script>
 </body>

@@ -5,19 +5,19 @@
 ══════════════════════════════════════════════╝ */
 const CFG = {
   heart: {
-    intervalMin: 2000,
-    intervalMax: 4000,
+    intervalMin: 2200,
+    intervalMax: 4200,
     emojis: ['💜', '💜', '💜', '🤍', '✨', '💜'],
   },
   sparkle: {
     max: 15,
-    throttleMs: 28,
-    // No white — invisible on white background
+    throttleMs: 30,
     colors: ['#C4B5FD', '#A78BFA', '#7C3AED', '#E9D5FF', '#FCD34D', '#F9A8D4'],
   },
   story: {
-    textLineMs:  380,  // stagger gap between text lines
-    emptyLineMs: 100,  // stagger gap between empty lines
+    textGapMs:  2500,   // gap before each text line fades in
+    emptyGapMs: 250,    // gap for empty spacer lines
+    afterLastMs: 1800,  // wait after final line before showing button
   },
   confetti: {
     count: 135,
@@ -39,7 +39,6 @@ const CFG = {
       "I don't believe you 😌",
     ],
     maxAttempts: 5,
-    maxOffset: 200,   // max px displacement from origin
   },
 };
 
@@ -114,14 +113,12 @@ const STORY = [
 ══════════════════════════════════════════════╝ */
 const S = {
   currentScreen: 1,
-  musicPlaying: false,
   storyStarted: false,
   questStarted: false,
   confettiDone: false,
   noAttempts: 0,
-  noSnapped: false,
-  noInitLeft: 0,
-  noInitTop: 0,
+  noNatLeft: null,
+  noNatTop: null,
   activeSparkles: [],
   lastSparkleTime: 0,
 };
@@ -184,18 +181,14 @@ function spawnHeart() {
   el.className = 'a-heart';
   el.textContent = CFG.heart.emojis[randInt(0, CFG.heart.emojis.length - 1)];
 
-  const dur    = rand(7, 11);
-  const rise   = rand(50, 85);
-  const rot    = rand(-18, 18);
-  const rotEnd = rot + rand(-15, 15);
-
+  const dur = rand(7, 11);
   el.style.cssText = `
     left:${rand(3,94)}%;bottom:-8%;
     font-size:${rand(0.9,1.5)}rem;
     --hdur:${dur}s;
-    --hrise:-${rise}vh;
-    --hr:${rot}deg;
-    --hre:${rotEnd}deg;
+    --hrise:-${rand(50,85)}vh;
+    --hr:${rand(-18,18)}deg;
+    --hre:${rand(-25,25)}deg;
   `;
   container.appendChild(el);
   setTimeout(() => el.remove(), dur * 1000);
@@ -203,8 +196,7 @@ function spawnHeart() {
 
 function startHeartLoop() {
   function schedule() {
-    const ms = rand(CFG.heart.intervalMin, CFG.heart.intervalMax);
-    setTimeout(() => { spawnHeart(); schedule(); }, ms);
+    setTimeout(() => { spawnHeart(); schedule(); }, rand(CFG.heart.intervalMin, CFG.heart.intervalMax));
   }
   spawnHeart();
   schedule();
@@ -215,7 +207,6 @@ function startHeartLoop() {
 ══════════════════════════════════════════════╝ */
 function initSparkles() {
   const container = document.getElementById('sparkles');
-
   document.addEventListener('mousemove', e => {
     if (reducedMotion()) return;
     const now = Date.now();
@@ -228,18 +219,15 @@ function initSparkles() {
 
     const el    = document.createElement('div');
     el.className = 'sparkle';
-    const color = CFG.sparkle.colors[randInt(0, CFG.sparkle.colors.length - 1)];
     const size  = rand(3, 9);
-
     el.style.cssText = `
       left:${e.clientX}px;top:${e.clientY}px;
       width:${size}px;height:${size}px;
-      background:${color};
+      background:${CFG.sparkle.colors[randInt(0, CFG.sparkle.colors.length - 1)]};
       --sdx:${rand(-35,35)}px;--sdy:${rand(-38,-8)}px;
     `;
     container.appendChild(el);
     S.activeSparkles.push(el);
-
     setTimeout(() => {
       el.remove();
       const idx = S.activeSparkles.indexOf(el);
@@ -271,7 +259,9 @@ function initQParticles() {
 }
 
 /* ╔══════════════════════════════════════════════
-   STORY — staggered fade-in (replaces typewriter)
+   STORY — automatic slow fade-in (no user input)
+   Each text line: 2.5s gap, then 1.2s CSS transition
+   Button appears only after last line's transition ends
 ══════════════════════════════════════════════╝ */
 async function runStory() {
   if (S.storyStarted) return;
@@ -298,28 +288,28 @@ async function runStory() {
     }
 
     if (line.t === '') {
-      // empty lines appear instantly as spacers
-      await delay(CFG.story.emptyLineMs);
+      // Empty spacer — no animation, short gap
+      await delay(CFG.story.emptyGapMs);
       continue;
     }
 
-    // Staggered reveal: wait, then fade in
-    await delay(CFG.story.textLineMs);
+    // Wait the full gap, then trigger the CSS fade-in
+    await delay(CFG.story.textGapMs);
     span.classList.add('on');
 
-    // Keep newest lines visible in the scrollable card
+    // Scroll the card to keep latest lines visible
     const card = out.closest('.story-card');
     if (card) card.scrollTop = card.scrollHeight;
   }
 
-  // Button appears after the last line finishes its transition
-  await delay(fast ? 0 : 500 + 700);
-  if (btnNext) btnNext.hidden = false;
+  // Wait for last transition (1.2s) + buffer, then reveal button
+  await delay(fast ? 0 : CFG.story.afterLastMs);
+  if (btnNext) btnNext.classList.add('show');
 }
 
 /* ╔══════════════════════════════════════════════
    THING CARDS (Screen 3)
-   Button revealed only after all cards are in
+   Button fades in only after all cards finish
 ══════════════════════════════════════════════╝ */
 function animateThingCards() {
   const cards  = document.querySelectorAll('.thing-card');
@@ -344,9 +334,9 @@ function animateThingCards() {
     }, delayMs);
   });
 
-  // Show button after the last card finishes entering (transition = 550ms + 300ms buffer)
+  // 550ms transition + 300ms breathing room after last card
   setTimeout(() => {
-    if (btnQ) btnQ.hidden = false;
+    if (btnQ) btnQ.classList.add('show');
   }, maxDelay + 550 + 300);
 }
 
@@ -367,14 +357,12 @@ async function runQuestionSequence() {
   habibi && habibi.classList.add('on');
 
   await delay(fast ? 0 : 900);
-
   for (const line of qLines) {
     line.classList.add('on');
     await delay(fast ? 0 : CFG.question.lineGap);
   }
 
   await delay(fast ? 0 : CFG.question.afterLines);
-
   if (reveal) {
     reveal.hidden = false;
     reveal.offsetHeight; // force reflow before transition
@@ -383,7 +371,9 @@ async function runQuestionSequence() {
 }
 
 /* ╔══════════════════════════════════════════════
-   NO BUTTON — constrained to ±200px of origin
+   NO BUTTON — strictly inside parent .question-card
+   Uses only CSS transforms. Natural position is
+   snapshotted on first interaction (before any transform).
 ══════════════════════════════════════════════╝ */
 function initNoButton() {
   const btn = document.getElementById('btn-no');
@@ -394,20 +384,11 @@ function initNoButton() {
   function handleNoInteraction(e) {
     if (e.type === 'click' && !isMobile) e.preventDefault();
 
-    if (!S.noSnapped) {
-      const rect    = btn.getBoundingClientRect();
-      S.noInitLeft  = rect.left;
-      S.noInitTop   = rect.top;
-      btn.style.cssText = `
-        position:fixed;
-        left:${S.noInitLeft}px;
-        top:${S.noInitTop}px;
-        width:${rect.width}px;
-        margin:0;
-        z-index:500;
-        transition:transform 400ms cubic-bezier(.22,1,.36,1),font-size 0.3s ease,padding 0.3s ease;
-      `;
-      S.noSnapped = true;
+    // Snapshot the button's natural viewport position once, before any transforms
+    if (S.noNatLeft === null) {
+      const r    = btn.getBoundingClientRect();
+      S.noNatLeft = r.left;
+      S.noNatTop  = r.top;
     }
 
     S.noAttempts++;
@@ -416,40 +397,42 @@ function initNoButton() {
       btn.textContent    = 'Okay fine, I tried.';
       btn.style.fontSize = '0.6rem';
       btn.style.padding  = '0.3rem 0.8rem';
-      btn.style.opacity  = '0.45';
-      // Drift to a small corner position, still within the 200px box
-      const dx = rand(-60, 60);
-      const dy = rand(60, 120);
-      btn.style.transform = `translate(${dx}px,${dy}px) rotate(${rand(-8,8)}deg) scale(0.55)`;
+      btn.style.opacity  = '0.4';
+      btn.style.transition = 'transform 400ms cubic-bezier(.22,1,.36,1), font-size 0.3s ease, padding 0.3s ease';
+      btn.style.transform = `translate(${rand(-30, 30)}px, ${rand(20, 50)}px) rotate(${rand(-6,6)}deg) scale(0.55)`;
       btn.removeEventListener('mouseenter', handleNoInteraction);
       btn.removeEventListener('click', handleNoInteraction);
       return;
     }
 
-    // Cycle through alternative texts
+    // Rotate texts
     const pool = CFG.no.texts.slice(1);
     btn.textContent = pool[randInt(0, pool.length - 1)];
 
-    const bw = btn.offsetWidth  || 140;
-    const bh = btn.offsetHeight || 44;
-    const maxOff = CFG.no.maxOffset;
+    // Get parent card boundary
+    const card     = document.querySelector('.question-card');
+    const cardRect = card
+      ? card.getBoundingClientRect()
+      : { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
 
-    // Random offset clamped to ±maxOffset AND within viewport
-    const rawDx = rand(-maxOff, maxOff);
-    const rawDy = rand(-maxOff, maxOff);
+    const bw  = btn.offsetWidth;
+    const bh  = btn.offsetHeight;
+    const pad = 14;
 
-    const newLeft = S.noInitLeft + rawDx;
-    const newTop  = S.noInitTop  + rawDy;
+    // Valid range of transforms relative to natural position
+    const minDx = cardRect.left  + pad          - S.noNatLeft;
+    const maxDx = cardRect.right - bw - pad     - S.noNatLeft;
+    const minDy = cardRect.top   + pad          - S.noNatTop;
+    const maxDy = cardRect.bottom - bh - pad    - S.noNatTop;
 
-    const clampedLeft = Math.max(20, Math.min(window.innerWidth  - bw - 20, newLeft));
-    const clampedTop  = Math.max(20, Math.min(window.innerHeight - bh - 20, newTop));
+    // Pick a random position within bounds; guard against inverted ranges
+    const dx  = (maxDx > minDx) ? rand(minDx, maxDx) : 0;
+    const dy  = (maxDy > minDy) ? rand(minDy, maxDy) : 0;
+    const rot = rand(-18, 18);
+    const sc  = rand(0.8, 0.92);
 
-    const dx  = clampedLeft - S.noInitLeft;
-    const dy  = clampedTop  - S.noInitTop;
-    const rot = rand(-20, 20);
-    const sc  = rand(0.78, 0.9);
-
-    btn.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(${sc})`;
+    btn.style.transition = 'transform 400ms cubic-bezier(.22,1,.36,1)';
+    btn.style.transform  = `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${sc})`;
   }
 
   if (!isMobile) {
@@ -469,21 +452,19 @@ function launchConfetti() {
   if (!container) return;
 
   for (let i = 0; i < CFG.confetti.count; i++) {
-    const el     = document.createElement('div');
-    el.className  = 'cf';
-    const color   = CFG.confetti.colors[randInt(0, CFG.confetti.colors.length - 1)];
-    const isHeart = Math.random() < 0.14;
+    const el      = document.createElement('div');
+    el.className   = 'cf';
+    const isHeart  = Math.random() < 0.14;
 
     if (isHeart) {
       el.textContent    = '💜';
       el.style.fontSize = `${rand(10, 18)}px`;
     } else {
       const size = rand(6, 13);
-      const h    = size * (Math.random() < 0.5 ? 1 : rand(0.4, 0.8));
       el.style.width        = `${size}px`;
-      el.style.height       = `${h}px`;
+      el.style.height       = `${size * (Math.random() < 0.5 ? 1 : rand(0.4, 0.8))}px`;
       el.style.borderRadius = Math.random() < 0.5 ? '50%' : '2px';
-      el.style.background   = color;
+      el.style.background   = CFG.confetti.colors[randInt(0, CFG.confetti.colors.length - 1)];
     }
 
     el.style.setProperty('--cx',   `${rand(0, window.innerWidth)}px`);
@@ -493,11 +474,9 @@ function launchConfetti() {
     el.style.left      = '0';
     el.style.top       = '0';
     el.style.animation = `cfFall ${rand(2.4, 4.2)}s cubic-bezier(.22,1,.36,1) ${rand(0, 1.1)}s forwards`;
-
     container.appendChild(el);
   }
 
-  // Extra celebratory hearts
   for (let i = 0; i < 22; i++) {
     setTimeout(() => spawnHeart(), rand(0, 1200));
   }
@@ -509,80 +488,86 @@ function launchConfetti() {
 }
 
 /* ╔══════════════════════════════════════════════
-   AUDIO — lofi only; loml replaced by Spotify embed
+   AUDIO MANAGER
+   - lofi plays from first button click onward
+   - Music button = mute / unmute only (never stops)
+   - YES click = play loml directly (autoplay-safe)
+     then crossfade lofi out / loml in over 2s
 ══════════════════════════════════════════════╝ */
-const Audio = (() => {
+const AudioMgr = (() => {
   const lofi = document.getElementById('audio-lofi');
-  let playing = false;
-  let musicBtn = null;
+  const loml = document.getElementById('audio-loml');
+  let lofiActive = false;
+  let muted      = false;
+  const VOL      = 0.5;
 
-  function fadeVolume(el, from, to, durationMs) {
+  if (lofi) {
+    lofi.addEventListener('error', () =>
+      console.error('[habibi] lofi failed to load:', lofi.src));
+  }
+  if (loml) {
+    loml.addEventListener('error', () =>
+      console.error('[habibi] loml failed to load:', loml.src));
+  }
+
+  function fadeVol(el, from, to, ms) {
+    if (!el) return Promise.resolve();
     return new Promise(resolve => {
-      if (!el) { resolve(); return; }
       el.volume = Math.max(0, Math.min(1, from));
       const start = performance.now();
-      function tick(now) {
-        const t = Math.min((now - start) / durationMs, 1);
+      (function tick(now) {
+        const t = Math.min((now - start) / ms, 1);
         el.volume = Math.max(0, Math.min(1, from + (to - from) * t));
-        if (t < 1) { requestAnimationFrame(tick); }
-        else       { el.volume = to; resolve(); }
-      }
-      requestAnimationFrame(tick);
+        t < 1 ? requestAnimationFrame(tick) : (el.volume = to, resolve());
+      })(start);
     });
   }
 
-  function toggle(btn) {
-    musicBtn = btn;
-    if (!playing) {
-      if (!lofi) return;
-      lofi.volume = 0;
-      lofi.play()
-        .then(() => {
-          fadeVolume(lofi, 0, 0.55, 1200);
-          playing = true;
-          btn.setAttribute('aria-pressed', 'true');
-          btn.classList.add('is-playing');
-        })
-        .catch(() => {
-          // Autoplay blocked — will try again on next user interaction
-        });
+  function updateBtn(active) {
+    const btn = document.getElementById('music-btn');
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', active.toString());
+    btn.classList.toggle('is-playing', active);
+  }
+
+  function startLofi() {
+    if (lofiActive) return;
+    lofiActive = true;
+    if (!lofi) return;
+    lofi.volume = 0;
+    lofi.loop   = true;
+    lofi.play()
+      .then(() => {
+        if (!muted) fadeVol(lofi, 0, VOL, 1500);
+        updateBtn(true);
+      })
+      .catch(err => console.error('[habibi] lofi play error:', err));
+  }
+
+  function toggleMute() {
+    if (!lofiActive) {
+      // First time: just start, don't toggle to muted
+      startLofi();
+      return;
+    }
+    muted = !muted;
+    if (muted) {
+      fadeVol(lofi, lofi ? lofi.volume : VOL, 0, 400);
+      updateBtn(false);
     } else {
-      fadeVolume(lofi, lofi ? lofi.volume : 0, 0, 800).then(() => {
-        if (lofi) lofi.pause();
-        playing = false;
-        btn.setAttribute('aria-pressed', 'false');
-        btn.classList.remove('is-playing');
-      });
+      fadeVol(lofi, 0, VOL, 600);
+      updateBtn(true);
     }
   }
 
-  function fadeOutLofi() {
-    if (!playing || !lofi) return Promise.resolve();
-    return fadeVolume(lofi, lofi.volume, 0, 2000).then(() => {
-      lofi.pause();
-      playing = false;
-      if (musicBtn) {
-        musicBtn.setAttribute('aria-pressed', 'false');
-        musicBtn.classList.remove('is-playing');
-      }
-    });
+  function crossfadeToLOML() {
+    // loml.play() is called by the caller synchronously in the click handler
+    if (lofi) fadeVol(lofi, lofi.volume || VOL, 0, 2000);
+    if (loml) fadeVol(loml, 0, 0.65, 2000);
   }
 
-  function isPlaying() { return playing; }
-
-  return { toggle, fadeOutLofi, isPlaying };
+  return { startLofi, toggleMute, crossfadeToLOML };
 })();
-
-/* ╔══════════════════════════════════════════════
-   SPOTIFY PLAYER
-══════════════════════════════════════════════╝ */
-function showSpotifyPlayer() {
-  const pill = document.getElementById('spotify-pill');
-  if (!pill) return;
-  pill.hidden = false;
-  pill.offsetHeight; // force reflow
-  pill.classList.add('show');
-}
 
 /* ╔══════════════════════════════════════════════
    NOW-PLAYING TOAST
@@ -591,7 +576,7 @@ function showNowPlaying() {
   const pill = document.getElementById('now-playing');
   if (!pill) return;
   pill.classList.add('show');
-  setTimeout(() => pill.classList.remove('show'), 4500);
+  setTimeout(() => pill.classList.remove('show'), 4000);
 }
 
 /* ╔══════════════════════════════════════════════
@@ -609,7 +594,6 @@ function initModal() {
     document.body.style.overflow = 'hidden';
     closeBtn && closeBtn.focus();
   }
-
   function close() {
     modal.hidden = true;
     document.body.style.overflow = '';
@@ -626,6 +610,14 @@ function initModal() {
    NAVIGATION WIRING
 ══════════════════════════════════════════════╝ */
 function wireNavigation() {
+  // Start lofi on first button click that isn't the music toggle
+  document.addEventListener('click', function onFirstClick(e) {
+    if (!e.target.closest('button')) return;
+    if (e.target.closest('#music-btn')) return; // music btn manages its own start
+    AudioMgr.startLofi();
+    document.removeEventListener('click', onFirstClick, true);
+  }, true);
+
   // Screen 1 → 2
   document.getElementById('btn-story')?.addEventListener('click', () => {
     showScreen(2);
@@ -644,29 +636,36 @@ function wireNavigation() {
     setTimeout(runQuestionSequence, 400);
   });
 
-  // YES button → Screen 5
+  // YES button → Screen 5 (loml called directly in click handler)
   document.getElementById('btn-yes')?.addEventListener('click', () => {
+    const loml = document.getElementById('audio-loml');
+    if (loml) {
+      loml.volume = 0;
+      // Direct play call inside click handler — satisfies autoplay policy
+      loml.play().catch(err => console.error('[habibi] loml play error:', err));
+    }
+    AudioMgr.crossfadeToLOML();
+
     showScreen(5);
     launchConfetti();
-    Audio.fadeOutLofi();
-    setTimeout(showSpotifyPlayer, 800);
-    setTimeout(showNowPlaying, 1400);
+
+    // Toast appears after the 2s crossfade
+    setTimeout(showNowPlaying, 2200);
   });
 
-  // Screen 5 → back to 1
+  // Screen 5 → loop back to screen 1
   document.getElementById('btn-end')?.addEventListener('click', () => {
     showScreen(1);
   });
 }
 
 /* ╔══════════════════════════════════════════════
-   MUSIC BUTTON
-   Plays only on explicit user interaction — no autoplay
+   MUSIC BUTTON — mute / unmute toggle
 ══════════════════════════════════════════════╝ */
 function wireMusicBtn() {
   const btn = document.getElementById('music-btn');
   if (!btn) return;
-  btn.addEventListener('click', () => Audio.toggle(btn));
+  btn.addEventListener('click', () => AudioMgr.toggleMute());
 }
 
 /* ╔══════════════════════════════════════════════
