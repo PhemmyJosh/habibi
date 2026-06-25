@@ -29,9 +29,6 @@
     🎵 Now playing — LOML · Savy Henry
   </div>
 
-  <!-- Skip story button — fixed on body, shown only during Screen 2 story -->
-  <button id="btn-skip-story" class="btn-skip-story" aria-label="Skip story animation" hidden>Skip ⏭</button>
-
   <!-- Easter egg: time capsule -->
   <button id="capsule-btn" class="capsule-btn" aria-label="Open our time capsule">
     Open our time capsule 💌
@@ -83,6 +80,7 @@
   <section id="s2" class="screen s-story" aria-label="Our story" inert>
     <div class="story-bg" aria-hidden="true"></div>
     <div class="glass-card story-card">
+      <button id="btn-skip-story" class="btn-skip-story" aria-label="Skip story animation" hidden>Skip</button>
       <div class="ornament" aria-hidden="true">✦ &thinsp; ✦ &thinsp; ✦</div>
       <div id="tw-out" class="tw-out" aria-live="polite" aria-label="Our story, appearing now"></div>
       <button class="btn btn-primary story-next btn-deferred" id="btn-things" aria-label="Continue to little things about Habibi">
