@@ -34,7 +34,7 @@ const CFG = {
       "That's suspicious 👀",
       "Habibi please 😂",
       "Nice try",
-      "Five years and this?",
+      "Habibi jor shaanu mi 😂",
       "Be serious for a second 💜",
       "I don't believe you 😌",
     ],
