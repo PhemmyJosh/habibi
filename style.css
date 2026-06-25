@@ -192,6 +192,20 @@ button { font-family: var(--font); }
 /* ══════════════════════════════════════════════════
    EASTER EGG BUTTON
 ══════════════════════════════════════════════════ */
+.site-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 600;
+  text-align: center;
+  padding-bottom: 0.75rem;
+  font-size: 0.7rem;
+  color: #9CA3AF;
+  pointer-events: none;
+  user-select: none;
+}
+
 .capsule-btn {
   position: fixed;
   bottom: 1.2rem;
