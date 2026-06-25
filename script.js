@@ -704,14 +704,47 @@ function wireNavigation() {
 
   // YES button → Screen 5 (loml called directly in click handler)
   document.getElementById('btn-yes')?.addEventListener('click', () => {
+    const lofi = document.getElementById('audio-lofi');
     const loml = document.getElementById('audio-loml');
+
+    // Play loml directly in the click handler (satisfies mobile autoplay policy)
     if (loml) {
       loml.volume = 0;
       loml.loop   = true;
-      // Direct play call inside click handler — satisfies autoplay policy
       loml.play().catch(err => console.error('[habibi] loml play error:', err));
     }
-    AudioMgr.crossfadeToLOML();
+
+    // Fade lofi out over 2s, then explicitly pause it.
+    // Mobile browsers often ignore volume=0 without a hard .pause() call.
+    if (lofi) {
+      const startVol  = lofi.volume || 0.5;
+      const startTime = performance.now();
+      const DURATION  = 2000;
+
+      (function fadeOut(now) {
+        const t = Math.min((now - startTime) / DURATION, 1);
+        lofi.volume = Math.max(0, startVol * (1 - t));
+        if (t < 1) {
+          requestAnimationFrame(fadeOut);
+        } else {
+          lofi.volume = 0;
+          lofi.pause(); // explicit pause — required on iOS/Android
+        }
+      })(performance.now());
+    }
+
+    // Fade loml in over 2s
+    if (loml) {
+      const startTime = performance.now();
+      const DURATION  = 2000;
+
+      (function fadeIn(now) {
+        const t = Math.min((now - startTime) / DURATION, 1);
+        loml.volume = Math.max(0, Math.min(0.65, 0.65 * t));
+        if (t < 1) requestAnimationFrame(fadeIn);
+        else loml.volume = 0.65;
+      })(performance.now());
+    }
 
     showScreen(5);
     launchConfetti();
