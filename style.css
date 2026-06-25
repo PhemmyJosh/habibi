@@ -539,6 +539,45 @@ button { font-family: var(--font); }
 .story-card::-webkit-scrollbar-track { background: transparent; }
 .story-card::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.28); border-radius: 4px; }
 
+/* Skip button — ghost, subtle, top-right of story screen */
+.btn-skip-story {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  z-index: 20;
+  background: transparent;
+  border: 1px solid rgba(109, 40, 217, 0.18);
+  border-radius: 100px;
+  color: rgba(109, 40, 217, 0.4);
+  font-family: var(--font);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.28rem 0.7rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  user-select: none;
+}
+
+.btn-skip-story:hover {
+  opacity: 1;
+  color: var(--c-royal);
+  border-color: rgba(109, 40, 217, 0.45);
+}
+
+.btn-skip-story:focus-visible {
+  outline: 2px solid var(--c-royal);
+  outline-offset: 3px;
+}
+
+.btn-skip-story[hidden] { display: none; }
+
+/* When skip fires, remove transitions so all story lines snap visible */
+.tw-out.skip-all .tw-line {
+  transition: none !important;
+}
+
 .ornament {
   text-align: center;
   color: var(--c-royal);

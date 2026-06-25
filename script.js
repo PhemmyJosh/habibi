@@ -121,6 +121,9 @@ const S = {
   noNatTop: null,
   activeSparkles: [],
   lastSparkleTime: 0,
+  // Story skip
+  storySkipped: false,
+  storySkipFn:  null,
 };
 
 /* ╔══════════════════════════════════════════════
@@ -129,6 +132,14 @@ const S = {
 const rand    = (min, max) => min + Math.random() * (max - min);
 const randInt = (min, max) => Math.floor(rand(min, max + 1));
 const delay   = ms => new Promise(r => setTimeout(r, ms));
+
+// Like delay() but can be short-circuited by skipStory()
+function storyGap(ms) {
+  return new Promise(resolve => {
+    const id = setTimeout(resolve, ms);
+    S.storySkipFn = () => { clearTimeout(id); resolve(); };
+  });
+}
 
 function reducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -260,15 +271,19 @@ function initQParticles() {
 
 /* ╔══════════════════════════════════════════════
    STORY — automatic slow fade-in (no user input)
-   Each text line: 2.5s gap, then 1.2s CSS transition
-   Button appears only after last line's transition ends
+   Each text line: 2.5s gap, then 1.2s CSS transition.
+   skipStory() short-circuits all gaps instantly.
+   Button appears only after last line's transition ends.
 ══════════════════════════════════════════════╝ */
 async function runStory() {
   if (S.storyStarted) return;
-  S.storyStarted = true;
+  S.storyStarted  = true;
+  S.storySkipped  = false;
+  S.storySkipFn   = null;
 
   const out     = document.getElementById('tw-out');
   const btnNext = document.getElementById('btn-things');
+  const skipBtn = document.getElementById('btn-skip-story');
   if (!out) return;
 
   const fast = reducedMotion();
@@ -282,29 +297,42 @@ async function runStory() {
     span.textContent = line.t;
     out.appendChild(span);
 
-    if (fast) {
+    if (fast || S.storySkipped) {
       span.classList.add('on');
       continue;
     }
 
     if (line.t === '') {
-      // Empty spacer — no animation, short gap
-      await delay(CFG.story.emptyGapMs);
+      await storyGap(CFG.story.emptyGapMs);
       continue;
     }
 
-    // Wait the full gap, then trigger the CSS fade-in
-    await delay(CFG.story.textGapMs);
+    await storyGap(CFG.story.textGapMs);
     span.classList.add('on');
 
-    // Scroll the card to keep latest lines visible
-    const card = out.closest('.story-card');
-    if (card) card.scrollTop = card.scrollHeight;
+    if (!S.storySkipped) {
+      const card = out.closest('.story-card');
+      if (card) card.scrollTop = card.scrollHeight;
+    }
   }
 
-  // Wait for last transition (1.2s) + buffer, then reveal button
-  await delay(fast ? 0 : CFG.story.afterLastMs);
+  // Story complete — hide skip button
+  if (skipBtn) skipBtn.hidden = true;
+  S.storySkipFn = null;
+
+  await delay(fast || S.storySkipped ? 0 : CFG.story.afterLastMs);
   if (btnNext) btnNext.classList.add('show');
+}
+
+/* Instantly reveals all story lines, cancels any running gap. */
+function skipStory() {
+  S.storySkipped = true;
+  const out = document.getElementById('tw-out');
+  if (out) {
+    out.classList.add('skip-all');                         // disables CSS transitions
+    out.querySelectorAll('.tw-line').forEach(el => el.classList.add('on'));
+  }
+  if (S.storySkipFn) { S.storySkipFn(); S.storySkipFn = null; }
 }
 
 /* ╔══════════════════════════════════════════════
@@ -649,6 +677,9 @@ function wireNavigation() {
     showScreen(2);
     setTimeout(runStory, 500);
   });
+
+  // Story skip button
+  document.getElementById('btn-skip-story')?.addEventListener('click', skipStory);
 
   // Screen 2 → 3
   document.getElementById('btn-things')?.addEventListener('click', () => {
